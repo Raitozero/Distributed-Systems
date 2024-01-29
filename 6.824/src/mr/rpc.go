@@ -25,6 +25,26 @@ type ExampleReply struct {
 }
 
 // Add your RPC definitions here.
+type MyArgs struct {
+	RequestType     int
+	MapTaskFileName string
+	ReduceTaskNum   int
+}
+
+// RequesType
+const (
+	callForTask = iota
+	callForMapFinish
+	callForReduceFinish
+)
+
+type MyReply struct {
+	Filename      string
+	NReduce       int
+	NMap          int
+	ReduceTaskNum int
+	TaskType      string //"waiting", "map", "reduce", "finished"
+}
 
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the master.
