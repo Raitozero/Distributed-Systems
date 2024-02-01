@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"time"
 )
 
 // Map functions return a slice of KeyValue.
@@ -44,7 +45,7 @@ func Worker(mapf func(string, string) []KeyValue,
 		args := MyArgs{}
 		reply := MyReply{}
 		res := call("Master.CallHandler", &args, &reply)
-		if !res {
+		if (!res) || reply.TaskType == "finished" {
 			return
 		}
 		switch reply.TaskType {
@@ -53,6 +54,7 @@ func Worker(mapf func(string, string) []KeyValue,
 		case "reduce":
 			doReduceTask(reducef, &reply)
 		}
+		time.Sleep(time.Second)
 	}
 }
 
@@ -66,7 +68,6 @@ func doMapTask(mapf func(string, string) []KeyValue, reply *MyReply) {
 		log.Fatalf("cannot read %v", reply.Filename)
 	}
 	file.Close()
-
 	kva := mapf(reply.Filename, string(content))
 	kvas := partition(kva, reply.NReduce)
 	//create intermediate files: "mr-1-2", 1 is the MapTaskNum, 2 is ReduceTaskNum
@@ -149,7 +150,7 @@ func doReduceTask(reducef func(string, []string) string, reply *MyReply) {
 	}
 	os.Rename(ofile.Name(), oname)
 	ofile.Close()
-	finishedArg := MyArgs{callForReduceFinish, reply.ReduceTaskNum, -1}
+	finishedArg := MyArgs{callForReduceFinish, -1, reply.ReduceTaskNum}
 	finishedReply := MyReply{}
 	call("Master.CallHandler", &finishedArg, &finishedReply)
 }

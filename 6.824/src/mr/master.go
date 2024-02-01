@@ -30,7 +30,7 @@ const (
 // Your code here -- RPC handlers for the worker to call.
 
 // 1.Receive a Call from Worker, then handle it
-func (m *Master) CallHandler(args *MyArgs, reply *MyReply) {
+func (m *Master) CallHandler(args *MyArgs, reply *MyReply) error {
 	workerRequestType := args.RequestType
 	switch workerRequestType {
 	case callForTask:
@@ -46,6 +46,7 @@ func (m *Master) CallHandler(args *MyArgs, reply *MyReply) {
 		m.ReduceTaskStatus[args.ReduceTaskNum] = Finished
 		m.mu.Unlock()
 	}
+	return nil
 }
 
 func (m *Master) AssignTask(reply *MyReply) error {
@@ -66,6 +67,7 @@ func (m *Master) AssignTask(reply *MyReply) error {
 			reply.Filename = m.MapFileNames[taskToAssign]
 			reply.NReduce = m.NReduce
 			reply.TaskType = "map"
+			reply.MapTaskNum = taskToAssign
 			m.MapTaskStatus[taskToAssign] = Allocated
 			m.mu.Unlock()
 			go func() {
@@ -158,7 +160,7 @@ func MakeMaster(files []string, nReduce int) *Master {
 	m.NReduceFinished = 0
 	m.MapTaskStatus = make([]int, m.NMap)
 	m.ReduceTaskStatus = make([]int, m.NReduce)
-	//set map, reduce taskstatus to unallocated
+	m.MapFileNames = files
 	m.server()
 	return &m
 }
