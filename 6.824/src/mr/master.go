@@ -15,8 +15,9 @@ type Master struct {
 	NReduce          int //number of reduce tasks
 	NMapFinished     int
 	NReduceFinished  int
-	MapTaskStatus    map[string]int //MapTaskStatus[filename] = 0->unallocated, 1->allocated, 2->finished
-	ReduceTaskStatus map[int]int    //same
+	MapTaskStatus    []int //0->unallocated, 1->allocated, 2->finished
+	ReduceTaskStatus []int //same
+	MapFileNames     []string
 	mu               sync.Mutex
 }
 
@@ -37,7 +38,7 @@ func (m *Master) CallHandler(args *MyArgs, reply *MyReply) {
 	case callForMapFinish:
 		m.mu.Lock()
 		m.NMapFinished++
-		m.MapTaskStatus[args.MapTaskFileName] = Finished
+		m.MapTaskStatus[args.MapTaskNum] = Finished
 		m.mu.Unlock()
 	case callForReduceFinish:
 		m.mu.Lock()
@@ -51,18 +52,18 @@ func (m *Master) AssignTask(reply *MyReply) error {
 	m.mu.Lock()
 	//1. check if maptasks all done
 	if m.NMapFinished < m.NMap {
-		taskToAssign := "NULL"
-		for filename, status := range m.MapTaskStatus {
+		taskToAssign := -1
+		for idx, status := range m.MapTaskStatus {
 			if status == Unallocated {
-				taskToAssign = filename
+				taskToAssign = idx
 				break
 			}
 		}
-		if taskToAssign == "NULL" {
+		if taskToAssign == -1 {
 			reply.TaskType = "waiting"
 			m.mu.Unlock()
 		} else {
-			reply.Filename = taskToAssign
+			reply.Filename = m.MapFileNames[taskToAssign]
 			reply.NReduce = m.NReduce
 			reply.TaskType = "map"
 			m.MapTaskStatus[taskToAssign] = Allocated
@@ -155,15 +156,9 @@ func MakeMaster(files []string, nReduce int) *Master {
 	m.NReduce = nReduce
 	m.NMapFinished = 0
 	m.NReduceFinished = 0
-	m.MapTaskStatus = make(map[string]int)
-	m.ReduceTaskStatus = make(map[int]int)
+	m.MapTaskStatus = make([]int, m.NMap)
+	m.ReduceTaskStatus = make([]int, m.NReduce)
 	//set map, reduce taskstatus to unallocated
-	for _, filename := range files {
-		m.MapTaskStatus[filename] = Unallocated
-	}
-	for i := 0; i < nReduce; i++ {
-		m.ReduceTaskStatus[i] = Unallocated
-	}
 	m.server()
 	return &m
 }

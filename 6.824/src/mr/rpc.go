@@ -26,9 +26,9 @@ type ExampleReply struct {
 
 // Add your RPC definitions here.
 type MyArgs struct {
-	RequestType     int
-	MapTaskFileName string
-	ReduceTaskNum   int
+	RequestType   int
+	MapTaskNum    int
+	ReduceTaskNum int
 }
 
 // RequesType
@@ -42,6 +42,7 @@ type MyReply struct {
 	Filename      string
 	NReduce       int
 	NMap          int
+	MapTaskNum    int
 	ReduceTaskNum int
 	TaskType      string //"waiting", "map", "reduce", "finished"
 }
